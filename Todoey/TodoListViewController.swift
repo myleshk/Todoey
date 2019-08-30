@@ -10,14 +10,14 @@ import UIKit
 
 class TodoListViewController: UITableViewController {
     
-    var items = [
-        "Find Jack",
-        "Fuck Dinosaur",
-        "Follow Bugs"
-    ]
+    var items : [String] = []
+    let defaultsKey = "TodoItems"
+    let defaults = UserDefaults.standard
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        
+        items = defaults.array(forKey: defaultsKey) as? [String] ?? []
         // Do any additional setup after loading the view.
     }
     
@@ -55,6 +55,8 @@ class TodoListViewController: UITableViewController {
             }
             
             self.items.append(textValue)
+            
+            self.defaults.set(self.items, forKey: "TodoItems")
             
             self.tableView.reloadData()
         }
