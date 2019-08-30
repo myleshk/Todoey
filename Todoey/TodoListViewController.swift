@@ -10,17 +10,17 @@ import UIKit
 
 class TodoListViewController: UITableViewController {
     
-    let items = [
+    var items = [
         "Find Jack",
         "Fuck Dinosaur",
         "Follow Bugs"
     ]
-
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view.
     }
-
+    
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return items.count
     }
@@ -42,6 +42,33 @@ class TodoListViewController: UITableViewController {
             tableView.cellForRow(at: indexPath)?.accessoryType = .none
         }
         tableView.deselectRow(at: indexPath, animated: true)
+    }
+    @IBAction func addButtonPressed(_ sender: UIBarButtonItem) {
+        
+        let alert = UIAlertController(title: "New Todoey Item", message: "", preferredStyle: .alert)
+        
+        let confirmAction = UIAlertAction(title: "Add Item", style: .default) { (action) in
+            let textValue = (alert.textFields?[0].text)!
+            
+            if textValue.isEmpty {
+                return
+            }
+            
+            self.items.append(textValue)
+            
+            self.tableView.reloadData()
+        }
+        
+        alert.addTextField { (alertTextField) in
+            alertTextField.placeholder = "Add a new item."
+        }
+        
+        alert.addAction(confirmAction)
+        // add cancel action, too
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel) { (alertAction) in })
+        
+        
+        present(alert, animated: true, completion: nil)
     }
 }
 
