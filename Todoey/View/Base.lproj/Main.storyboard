@@ -34,6 +34,7 @@
                     </tableView>
                     <navigationItem key="navigationItem" title="Todoey" id="DzI-11-VAI">
                         <barButtonItem key="rightBarButtonItem" systemItem="add" id="HZX-wH-73t">
+                            <color key="tintColor" red="0.99999600649999998" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                             <connections>
                                 <action selector="addButtonPressed:" destination="wVc-gD-8Q2" id="FSd-69-f8h"/>
                             </connections>

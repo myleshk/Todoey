@@ -97,6 +97,13 @@ class TodoListViewController: UITableViewController {
     
     func loadItems(requestProvider: (_ request: NSFetchRequest<TodoItem>)->NSFetchRequest<TodoItem>) {
         let request : NSFetchRequest<TodoItem> = requestProvider(TodoItem.fetchRequest())
+        let categoryPredicate = NSPredicate(format: "category.name MATCHES %@", category!.name!)
+        if let extraPredicate = request.predicate {
+            // if requestProvider() already provides predicate
+            request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [extraPredicate, categoryPredicate])
+        } else {
+            request.predicate = categoryPredicate
+        }
         // get data from core data
         do {
             items = try context.fetch(request)

@@ -61,7 +61,7 @@ class CategoryViewControllerTableViewController: UITableViewController {
         cell.textLabel?.text = category.name
         
         if category.items!.count > 0 {
-            cell.accessoryType = .detailButton
+            cell.accessoryType = .disclosureIndicator
         } else {
             cell.accessoryType = .none
         }
