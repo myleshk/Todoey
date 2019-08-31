@@ -7,18 +7,17 @@
 //
 
 import UIKit
+import CoreData
 
 class TodoListViewController: UITableViewController {
     
-    var items : [String] = []
-    let defaultsKey = "TodoItems"
-    let defaults = UserDefaults.standard
+    var items : [TodoItem] = []
+    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        items = defaults.array(forKey: defaultsKey) as? [String] ?? []
-        // Do any additional setup after loading the view.
+        loadItems()
     }
     
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -27,22 +26,30 @@ class TodoListViewController: UITableViewController {
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "TodoItemCell", for: indexPath)
-        cell.textLabel?.text = items[indexPath.row]
+        let todoItem = items[indexPath.row]
+        cell.textLabel?.text = todoItem.title
+        
+        if todoItem.isDone {
+            cell.accessoryType = .checkmark
+            cell.textLabel?.textColor = UIColor.gray
+        } else {
+            cell.accessoryType = .none
+            cell.textLabel?.textColor = UIColor.black
+        }
         
         return cell
     }
     
     //MARK - TableView Delegate Methods
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        print(items[indexPath.row])
+        items[indexPath.row].isDone = !items[indexPath.row].isDone
         
-        if tableView.cellForRow(at: indexPath)?.accessoryType != .checkmark {
-            tableView.cellForRow(at: indexPath)?.accessoryType = .checkmark
-        } else {
-            tableView.cellForRow(at: indexPath)?.accessoryType = .none
-        }
         tableView.deselectRow(at: indexPath, animated: true)
+        
+        saveItems()
     }
+    
+    
     @IBAction func addButtonPressed(_ sender: UIBarButtonItem) {
         
         let alert = UIAlertController(title: "New Todoey Item", message: "", preferredStyle: .alert)
@@ -54,11 +61,12 @@ class TodoListViewController: UITableViewController {
                 return
             }
             
-            self.items.append(textValue)
+            let newTodoItem = TodoItem(context: self.context)
+            newTodoItem.title = textValue
             
-            self.defaults.set(self.items, forKey: "TodoItems")
+            self.items.append(newTodoItem)
             
-            self.tableView.reloadData()
+            self.saveItems()
         }
         
         alert.addTextField { (alertTextField) in
@@ -71,6 +79,25 @@ class TodoListViewController: UITableViewController {
         
         
         present(alert, animated: true, completion: nil)
+    }
+    
+    func saveItems() {
+        self.tableView.reloadData()
+        do {
+            try context.save()
+        } catch {
+            print(error)
+        }
+    }
+    
+    func loadItems() {
+        // get data from core data
+        let request : NSFetchRequest<TodoItem> = TodoItem.fetchRequest()
+        do {
+            items = try context.fetch(request)
+        } catch {
+            print(error)
+        }
     }
 }
 
