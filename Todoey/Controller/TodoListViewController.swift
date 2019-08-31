@@ -13,14 +13,15 @@ class TodoListViewController: UITableViewController {
     @IBOutlet weak var searchBar: UISearchBar!
     
     var items : [TodoItem] = []
+    var category : Category? {
+        didSet { loadItems { (request) -> NSFetchRequest<TodoItem> in request } }
+    }
     let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
         searchBar.delegate = self
-        
-        loadItems { (request) -> NSFetchRequest<TodoItem> in request }
     }
     
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -66,6 +67,7 @@ class TodoListViewController: UITableViewController {
             
             let newTodoItem = TodoItem(context: self.context)
             newTodoItem.title = textValue
+            newTodoItem.category = self.category
             
             self.items.append(newTodoItem)
             
