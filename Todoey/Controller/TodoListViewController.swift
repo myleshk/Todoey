@@ -10,6 +10,7 @@ import UIKit
 import CoreData
 
 class TodoListViewController: UITableViewController {
+    @IBOutlet weak var searchBar: UISearchBar!
     
     var items : [TodoItem] = []
     let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
@@ -17,7 +18,9 @@ class TodoListViewController: UITableViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        loadItems()
+        searchBar.delegate = self
+        
+        loadItems { (request) -> NSFetchRequest<TodoItem> in request }
     }
     
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -90,14 +93,37 @@ class TodoListViewController: UITableViewController {
         }
     }
     
-    func loadItems() {
+    func loadItems(requestProvider: (_ request: NSFetchRequest<TodoItem>)->NSFetchRequest<TodoItem>) {
+        let request : NSFetchRequest<TodoItem> = requestProvider(TodoItem.fetchRequest())
         // get data from core data
-        let request : NSFetchRequest<TodoItem> = TodoItem.fetchRequest()
         do {
             items = try context.fetch(request)
+            self.tableView.reloadData()
         } catch {
             print(error)
         }
     }
 }
 
+//MARK: - Search Bar
+extension TodoListViewController : UISearchBarDelegate {
+    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+        loadItems { (request) -> NSFetchRequest<TodoItem> in
+            if searchText.count > 0 {
+                // add conditions to request
+                request.predicate = NSPredicate(format: "title CONTAINS[cd] %@", searchText)
+                request.sortDescriptors = [
+                    NSSortDescriptor(key: "title", ascending: true)
+                ]
+                
+            } // otherwise show all
+            else {
+                DispatchQueue.main.async {
+                    searchBar.resignFirstResponder()
+                }
+            }
+            
+            return request
+        }
+    }
+}
