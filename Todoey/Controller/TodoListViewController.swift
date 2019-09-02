@@ -7,38 +7,52 @@
 //
 
 import UIKit
-import CoreData
+import RealmSwift
 
 class TodoListViewController: UITableViewController {
     @IBOutlet weak var searchBar: UISearchBar!
     
-    var items : [TodoItem] = []
+    var items : Results<TodoItem>?
+    var realm: Realm?
     var category : Category? {
-        didSet { loadItems { (request) -> NSFetchRequest<TodoItem> in request } }
+        didSet {
+            loadItems()
+        }
     }
-    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
+        realm = try! Realm()
         searchBar.delegate = self
     }
     
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return items.count
+        if let count = items?.count {
+            if count > 0 { return count }
+        }
+        return 1
     }
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "TodoItemCell", for: indexPath)
-        let todoItem = items[indexPath.row]
-        cell.textLabel?.text = todoItem.title
         
-        if todoItem.isDone {
-            cell.accessoryType = .checkmark
-            cell.textLabel?.textColor = UIColor.gray
-        } else {
+        if items?.count == 0 {
+            cell.textLabel?.text = "Start by adding an item"
+            cell.textLabel?.textColor = .gray
             cell.accessoryType = .none
-            cell.textLabel?.textColor = UIColor.black
+        } else {
+            cell.textLabel?.textColor = .black
+            
+            let todoItem = items?[indexPath.row]
+            cell.textLabel?.text = todoItem?.title
+            if todoItem!.isDone {
+                cell.accessoryType = .checkmark
+                cell.textLabel?.textColor = UIColor.gray
+            } else {
+                cell.accessoryType = .none
+                cell.textLabel?.textColor = UIColor.black
+            }
         }
         
         return cell
@@ -46,16 +60,24 @@ class TodoListViewController: UITableViewController {
     
     //MARK - TableView Delegate Methods
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        items[indexPath.row].isDone = !items[indexPath.row].isDone
+        if let todoItem = items?[indexPath.row] {
+            do {
+                try realm?.write {
+                    todoItem.isDone = !todoItem.isDone
+                }
+            } catch {
+                print(error)
+            }
+            
+            tableView.reloadData()
+        }
+        
         
         tableView.deselectRow(at: indexPath, animated: true)
-        
-        saveItems()
     }
     
     
     @IBAction func addButtonPressed(_ sender: UIBarButtonItem) {
-        
         let alert = UIAlertController(title: "New Todoey Item", message: "", preferredStyle: .alert)
         
         let confirmAction = UIAlertAction(title: "Add Item", style: .default) { (action) in
@@ -65,13 +87,12 @@ class TodoListViewController: UITableViewController {
                 return
             }
             
-            let newTodoItem = TodoItem(context: self.context)
-            newTodoItem.title = textValue
-            newTodoItem.category = self.category
-            
-            self.items.append(newTodoItem)
-            
-            self.saveItems()
+            if self.category != nil {
+                let newTodoItem = TodoItem()
+                newTodoItem.title = textValue
+                
+                self.addTodoItem(todoItem: newTodoItem)
+            }
         }
         
         alert.addTextField { (alertTextField) in
@@ -86,53 +107,36 @@ class TodoListViewController: UITableViewController {
         present(alert, animated: true, completion: nil)
     }
     
-    func saveItems() {
-        self.tableView.reloadData()
+    func addTodoItem(todoItem: TodoItem) {
         do {
-            try context.save()
+            try realm?.write {
+                realm?.add(todoItem)
+                category!.items.append(todoItem)
+            }
         } catch {
             print(error)
         }
+        self.tableView.reloadData()
     }
     
-    func loadItems(requestProvider: (_ request: NSFetchRequest<TodoItem>)->NSFetchRequest<TodoItem>) {
-        let request : NSFetchRequest<TodoItem> = requestProvider(TodoItem.fetchRequest())
-        let categoryPredicate = NSPredicate(format: "category.name MATCHES %@", category!.name!)
-        if let extraPredicate = request.predicate {
-            // if requestProvider() already provides predicate
-            request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [extraPredicate, categoryPredicate])
-        } else {
-            request.predicate = categoryPredicate
-        }
-        // get data from core data
-        do {
-            items = try context.fetch(request)
-            self.tableView.reloadData()
-        } catch {
-            print(error)
-        }
+    func loadItems() {
+        items = category?.items.sorted(byKeyPath: "title", ascending: false)
+        self.tableView.reloadData()
     }
 }
 
 //MARK: - Search Bar
 extension TodoListViewController : UISearchBarDelegate {
     func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
-        loadItems { (request) -> NSFetchRequest<TodoItem> in
-            if searchText.count > 0 {
-                // add conditions to request
-                request.predicate = NSPredicate(format: "title CONTAINS[cd] %@", searchText)
-                request.sortDescriptors = [
-                    NSSortDescriptor(key: "title", ascending: true)
-                ]
-                
-            } // otherwise show all
-            else {
-                DispatchQueue.main.async {
-                    searchBar.resignFirstResponder()
-                }
+        if searchText.count > 0 {
+            items = items?.filter("title CONTAINS[cd] %@", searchText).sorted(byKeyPath: "createdAt", ascending: true)
+            self.tableView.reloadData()
+        } // otherwise show all
+        else {
+            loadItems()
+            DispatchQueue.main.async {
+                searchBar.resignFirstResponder()
             }
-            
-            return request
         }
     }
 }

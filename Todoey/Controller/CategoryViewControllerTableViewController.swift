@@ -7,16 +7,21 @@
 //
 
 import UIKit
-import CoreData
+import RealmSwift
 
 class CategoryViewControllerTableViewController: UITableViewController {
-    var categories : [Category] = []
-    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
+    var categories : Results<Category>!
+    var realm: Realm?
     
     override func viewDidLoad() {
         super.viewDidLoad()
-
-        loadCategories { (request) -> NSFetchRequest<Category> in request }
+        realm = try! Realm()
+        
+        loadCategories()
+    }
+    
+    override func viewDidAppear(_ animated: Bool) {
+        loadCategories()
     }
 
     @IBAction func addButtonPressed(_ sender: UIBarButtonItem) {
@@ -29,12 +34,10 @@ class CategoryViewControllerTableViewController: UITableViewController {
                 return
             }
             
-            let newCategory = Category(context: self.context)
+            let newCategory = Category()
             newCategory.name = textValue
             
-            self.categories.append(newCategory)
-            
-            self.saveCategories()
+            self.addCategory(category: newCategory)
         }
         
         alert.addTextField { (alertTextField) in
@@ -52,18 +55,28 @@ class CategoryViewControllerTableViewController: UITableViewController {
     // MARK: - Tableview
     
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return categories.count
+        if let count = categories?.count {
+            if count > 0 { return count }
+        }
+        return 1
     }
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "CategoryCell", for: indexPath)
-        let category = categories[indexPath.row]
-        cell.textLabel?.text = category.name
-        
-        if category.items!.count > 0 {
-            cell.accessoryType = .disclosureIndicator
+
+        if categories?.count == 0 {
+            cell.textLabel?.text = "Start by adding a category"
+            cell.textLabel?.textColor = .gray
         } else {
-            cell.accessoryType = .none
+            cell.textLabel?.textColor = .black
+
+            let category = categories?[indexPath.row]
+            cell.textLabel?.text = category?.name
+            if category?.items.count == 0 {
+                cell.accessoryType = .none
+            } else {
+                cell.accessoryType = .disclosureIndicator
+            }
         }
         
         return cell
@@ -73,30 +86,28 @@ class CategoryViewControllerTableViewController: UITableViewController {
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         let destVC = segue.destination as! TodoListViewController
         let indexPath = tableView.indexPathForSelectedRow!
-        destVC.category = categories[indexPath.row]
+        destVC.category = categories?[indexPath.row]
     }
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         performSegue(withIdentifier: "goToItems", sender: self)
     }
     
-    func saveCategories() {
-        self.tableView.reloadData()
+    func addCategory(category: Category) {
         do {
-            try context.save()
+            try realm?.write {
+                realm?.add(category)
+            }
         } catch {
             print(error)
         }
+        
+        self.tableView.reloadData()
     }
     
-    func loadCategories(requestProvider: (_ request: NSFetchRequest<Category>)->NSFetchRequest<Category>) {
-        let request : NSFetchRequest<Category> = requestProvider(Category.fetchRequest())
-        // get data from core data
-        do {
-            categories = try context.fetch(request)
-            self.tableView.reloadData()
-        } catch {
-            print(error)
-        }
+    func loadCategories() {
+        categories = realm?.objects(Category.self)
+        
+        self.tableView.reloadData()
     }
 }
