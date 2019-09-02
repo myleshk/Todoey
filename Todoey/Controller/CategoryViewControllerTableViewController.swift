@@ -9,7 +9,7 @@
 import UIKit
 import RealmSwift
 
-class CategoryViewControllerTableViewController: UITableViewController {
+class CategoryViewControllerTableViewController: SwipeTableViewController {
     var categories : Results<Category>!
     var realm: Realm?
     
@@ -23,7 +23,7 @@ class CategoryViewControllerTableViewController: UITableViewController {
     override func viewDidAppear(_ animated: Bool) {
         loadCategories()
     }
-
+    
     @IBAction func addButtonPressed(_ sender: UIBarButtonItem) {
         let alert = UIAlertController(title: "New Todoey Category", message: "", preferredStyle: .alert)
         
@@ -61,15 +61,18 @@ class CategoryViewControllerTableViewController: UITableViewController {
         return 1
     }
     
+    
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "CategoryCell", for: indexPath)
-
+        let cell = super.tableView(tableView, cellForRowAt: indexPath)
+        
         if categories?.count == 0 {
             cell.textLabel?.text = "Start by adding a category"
+            cell.accessoryType = .none
             cell.textLabel?.textColor = .gray
+            return cell
         } else {
             cell.textLabel?.textColor = .black
-
+            
             let category = categories?[indexPath.row]
             cell.textLabel?.text = category?.name
             if category?.items.count == 0 {
@@ -90,7 +93,11 @@ class CategoryViewControllerTableViewController: UITableViewController {
     }
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        performSegue(withIdentifier: "goToItems", sender: self)
+        if indexPath.row < categories.count {
+            performSegue(withIdentifier: "goToItems", sender: self)
+        }
+        
+        tableView.deselectRow(at: indexPath, animated: true)
     }
     
     func addCategory(category: Category) {
@@ -109,5 +116,17 @@ class CategoryViewControllerTableViewController: UITableViewController {
         categories = realm?.objects(Category.self)
         
         self.tableView.reloadData()
+    }
+    
+    override func deleteData(at indexPath: IndexPath) {
+        if let categoryToDelete = self.categories?[indexPath.row] {
+            do {
+                try self.realm?.write {
+                    self.realm?.delete(categoryToDelete)
+                }
+            } catch {
+                print(error)
+            }
+        }
     }
 }

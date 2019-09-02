@@ -9,7 +9,7 @@
 import UIKit
 import RealmSwift
 
-class TodoListViewController: UITableViewController {
+class TodoListViewController: SwipeTableViewController {
     @IBOutlet weak var searchBar: UISearchBar!
     
     var items : Results<TodoItem>?
@@ -35,7 +35,7 @@ class TodoListViewController: UITableViewController {
     }
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "TodoItemCell", for: indexPath)
+        let cell = super.tableView(tableView, cellForRowAt: indexPath)
         
         if items?.count == 0 {
             cell.textLabel?.text = "Start by adding an item"
@@ -122,6 +122,18 @@ class TodoListViewController: UITableViewController {
     func loadItems() {
         items = category?.items.sorted(byKeyPath: "title", ascending: false)
         self.tableView.reloadData()
+    }
+    
+    override func deleteData(at indexPath: IndexPath) {
+        if let itemToDelete = self.items?[indexPath.row] {
+            do {
+                try self.realm?.write {
+                    self.realm?.delete(itemToDelete)
+                }
+            } catch {
+                print(error)
+            }
+        }
     }
 }
 
