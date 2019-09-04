@@ -8,6 +8,7 @@
 
 import UIKit
 import RealmSwift
+import ChameleonFramework
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -18,7 +19,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         let config = Realm.Configuration(
             // Set the new schema version. This must be greater than the previously used
             // version (if you've never set a schema version before, the version is 0).
-            schemaVersion: 10,
+            schemaVersion: 11,
             
             // Set the block which will be called automatically when opening a Realm with
             // a schema version lower than the one set above
@@ -27,6 +28,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
                 if oldSchemaVersion < 10 {
                     migration.enumerateObjects(ofType: "TodoItem", { (oldObject, newObject) in
                         newObject?["createdAt"] = Date()
+                    })
+                }
+                
+                if oldSchemaVersion < 11 {
+                    migration.enumerateObjects(ofType: "Category", { (oldObject, newObject) in
+                        newObject?["colorHex"] = UIColor.randomFlat.hexValue()
                     })
                 }
         })

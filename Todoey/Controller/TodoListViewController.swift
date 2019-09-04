@@ -8,6 +8,7 @@
 
 import UIKit
 import RealmSwift
+import ChameleonFramework
 
 class TodoListViewController: SwipeTableViewController {
     @IBOutlet weak var searchBar: UISearchBar!
@@ -18,6 +19,26 @@ class TodoListViewController: SwipeTableViewController {
         didSet {
             loadItems()
         }
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        if let themeColor = UIColor(hexString: category!.colorHex) {
+            searchBar?.barTintColor = themeColor
+            
+            navigationController?.navigationBar.barTintColor = themeColor
+            navigationController?.navigationBar.largeTitleTextAttributes = [
+                NSAttributedString.Key.foregroundColor: ContrastColorOf(themeColor, returnFlat: true)
+                
+            ]
+        }
+    }
+    
+    override func willMove(toParent parent: UIViewController?) {
+        let themeColor = UIColor.flatLimeDark
+        navigationController?.navigationBar.barTintColor = themeColor
+        navigationController?.navigationBar.largeTitleTextAttributes = [
+            NSAttributedString.Key.foregroundColor: ContrastColorOf(themeColor, returnFlat: true)
+        ]
     }
     
     override func viewDidLoad() {
@@ -42,16 +63,36 @@ class TodoListViewController: SwipeTableViewController {
             cell.textLabel?.textColor = .gray
             cell.accessoryType = .none
         } else {
-            cell.textLabel?.textColor = .black
+            let rowNo = CGFloat(indexPath.row)
+            let numOfRows = CGFloat(items!.count)
+            let colorLevel = (rowNo+0.5-numOfRows/2.0) / numOfRows
+            var bgColor = UIColor(hexString: category!.colorHex)
+            if colorLevel > 0 {
+                bgColor = bgColor?.darken(byPercentage: colorLevel)
+            } else if colorLevel < 0 {
+                bgColor = bgColor?.lighten(byPercentage: -colorLevel)
+            }
+            cell.backgroundColor = bgColor
+            cell.textLabel?.textColor = ContrastColorOf(bgColor!, returnFlat: true)
             
-            let todoItem = items?[indexPath.row]
-            cell.textLabel?.text = todoItem?.title
-            if todoItem!.isDone {
+            let todoItem = items![indexPath.row]
+            let rawTitle = todoItem.title
+            if todoItem.isDone {
                 cell.accessoryType = .checkmark
-                cell.textLabel?.textColor = UIColor.gray
+                
+                
+                let attributeTitle = NSMutableAttributedString(string: rawTitle)
+                attributeTitle.addAttribute(
+                    NSAttributedString.Key.strikethroughStyle,
+                    value: 1,
+                    range: NSRange(location: 0, length: attributeTitle.length)
+                )
+                cell.textLabel?.text = nil
+                cell.textLabel?.attributedText = attributeTitle
             } else {
                 cell.accessoryType = .none
-                cell.textLabel?.textColor = UIColor.black
+                cell.textLabel?.attributedText = nil
+                cell.textLabel?.text = rawTitle
             }
         }
         

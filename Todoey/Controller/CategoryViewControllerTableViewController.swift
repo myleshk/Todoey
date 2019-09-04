@@ -8,6 +8,7 @@
 
 import UIKit
 import RealmSwift
+import ChameleonFramework
 
 class CategoryViewControllerTableViewController: SwipeTableViewController {
     var categories : Results<Category>!
@@ -20,7 +21,7 @@ class CategoryViewControllerTableViewController: SwipeTableViewController {
         loadCategories()
     }
     
-    override func viewDidAppear(_ animated: Bool) {
+    override func viewWillAppear(_ animated: Bool) {
         loadCategories()
     }
     
@@ -36,6 +37,7 @@ class CategoryViewControllerTableViewController: SwipeTableViewController {
             
             let newCategory = Category()
             newCategory.name = textValue
+            newCategory.colorHex = UIColor.randomFlat.hexValue()
             
             self.addCategory(category: newCategory)
         }
@@ -71,10 +73,11 @@ class CategoryViewControllerTableViewController: SwipeTableViewController {
             cell.textLabel?.textColor = .gray
             return cell
         } else {
-            cell.textLabel?.textColor = .black
-            
             let category = categories?[indexPath.row]
             cell.textLabel?.text = category?.name
+            let bgColor = UIColor(hexString: category?.colorHex ?? "FFFFFF")
+            cell.backgroundColor = bgColor
+            cell.textLabel?.textColor = ContrastColorOf(bgColor!, returnFlat: true)
             if category?.items.count == 0 {
                 cell.accessoryType = .none
             } else {
